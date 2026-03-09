@@ -6,7 +6,9 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -25,6 +27,12 @@ class BackgroundVoiceService : Service() {
     private var speechRecognizer: SpeechRecognizer? = null
     private var listening = false
 
+    // Conversation state: after trigger heard, collect phrases and flush on 1s silence.
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val buffer = StringBuilder()
+    private var waitingAfterTrigger = false
+    private val flushRunnable = Runnable { flushBufferedPrompt() }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
@@ -42,6 +50,7 @@ class BackgroundVoiceService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         listening = false
+        mainHandler.removeCallbacks(flushRunnable)
         speechRecognizer?.destroy()
         speechRecognizer = null
     }
@@ -68,11 +77,8 @@ class BackgroundVoiceService : Service() {
 
                 override fun onResults(results: android.os.Bundle?) {
                     val texts = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    val text = texts?.firstOrNull().orEmpty()
-                    val sent = processText(text)
-                    val status = if (sent) "전송됨: $text" else "트리거 미감지"
-                    val nm = getSystemService(NotificationManager::class.java)
-                    nm.notify(101, buildNotification(status))
+                    val text = texts?.firstOrNull().orEmpty().trim()
+                    processStreamingText(text)
                     if (listening) restartListeningSoon()
                 }
             })
@@ -85,9 +91,9 @@ class BackgroundVoiceService : Service() {
     }
 
     private fun restartListeningSoon() {
-        android.os.Handler(mainLooper).postDelayed({
+        mainHandler.postDelayed({
             if (listening) startListeningOnce()
-        }, 800)
+        }, 250)
     }
 
     private fun startListeningOnce() {
@@ -100,27 +106,74 @@ class BackgroundVoiceService : Service() {
         speechRecognizer?.startListening(intent)
     }
 
-    private fun processText(text: String): Boolean {
+    private fun processStreamingText(text: String) {
+        if (text.isBlank()) return
+
+        val prefs = getSharedPreferences("voice_bridge", MODE_PRIVATE)
+        val triggerCsv = prefs.getString("triggers", "AI야,AI") ?: "AI야,AI"
+        val triggers = triggerCsv.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+
+        if (!waitingAfterTrigger) {
+            val (matched, remainder) = detectTrigger(text, triggers)
+            if (!matched) {
+                updateNotification("트리거 미감지")
+                return
+            }
+            waitingAfterTrigger = true
+            if (remainder.isNotBlank()) appendToBuffer(remainder)
+            scheduleFlushIn1s()
+            updateNotification("트리거 감지됨, 입력 수집 중...")
+            return
+        }
+
+        // Already in capture mode; keep collecting until 1s silence.
+        appendToBuffer(text)
+        scheduleFlushIn1s()
+        updateNotification("추가 입력 수집 중...")
+    }
+
+    private fun detectTrigger(text: String, triggers: List<String>): Pair<Boolean, String> {
+        val input = text.trim()
+        for (trigger in triggers) {
+            if (input.startsWith(trigger)) {
+                val remainder = input.removePrefix(trigger).trim(' ', ':', ',', '-')
+                return true to remainder
+            }
+        }
+        return false to ""
+    }
+
+    private fun appendToBuffer(part: String) {
+        if (part.isBlank()) return
+        if (buffer.isNotEmpty()) buffer.append(' ')
+        buffer.append(part.trim())
+    }
+
+    private fun scheduleFlushIn1s() {
+        mainHandler.removeCallbacks(flushRunnable)
+        mainHandler.postDelayed(flushRunnable, 1000)
+    }
+
+    private fun flushBufferedPrompt() {
+        val prompt = buffer.toString().trim()
+        buffer.clear()
+        waitingAfterTrigger = false
+
+        if (prompt.isBlank()) {
+            updateNotification("입력 없음 (전송 안 함)")
+            return
+        }
+
         val prefs = getSharedPreferences("voice_bridge", MODE_PRIVATE)
         val token = prefs.getString("token", "") ?: ""
         val chatId = prefs.getString("chatId", "") ?: ""
-        val triggerCsv = prefs.getString("triggers", "AI야,AI") ?: "AI야,AI"
-        if (token.isBlank() || chatId.isBlank()) return false
-
-        val prompt = extractPrompt(text, triggerCsv) ?: return false
-        return sendToTelegram(token, chatId, prompt)
-    }
-
-    private fun extractPrompt(text: String, triggerCsv: String): String? {
-        val triggers = triggerCsv.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-        val input = text.trim()
-        if (input.isEmpty()) return null
-        for (trigger in triggers) {
-            if (input.startsWith(trigger)) {
-                return input.removePrefix(trigger).trim(' ', ':', ',', '-').ifEmpty { null }
-            }
+        if (token.isBlank() || chatId.isBlank()) {
+            updateNotification("토큰/채팅ID 없음")
+            return
         }
-        return null
+
+        val sent = sendToTelegram(token, chatId, prompt)
+        updateNotification(if (sent) "전송됨: $prompt" else "전송 실패")
     }
 
     private fun sendToTelegram(token: String, chatId: String, prompt: String): Boolean {
@@ -146,6 +199,11 @@ class BackgroundVoiceService : Service() {
             val nm = getSystemService(NotificationManager::class.java)
             nm.createNotificationChannel(channel)
         }
+    }
+
+    private fun updateNotification(content: String) {
+        val nm = getSystemService(NotificationManager::class.java)
+        nm.notify(101, buildNotification(content))
     }
 
     private fun buildNotification(content: String): Notification {
