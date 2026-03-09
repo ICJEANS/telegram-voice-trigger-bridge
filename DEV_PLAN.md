@@ -23,13 +23,13 @@
    - bot token, chat id, trigger words
 
 ## Milestones
-1. 프로젝트 초기화 및 문서화
-2. Telegram 송신 모듈 구현
-3. STT 모듈 구현
-4. Trigger 파서 구현
-5. 모바일 UI 연결 (record → parse → send)
-6. 테스트/로그/예외처리 강화
-7. 배포 빌드
+1. [x] 프로젝트 초기화 및 문서화
+2. [x] Telegram 송신 모듈 구현 (Python)
+3. [x] STT 모듈 구현 (Android SpeechRecognizer Intent MVP)
+4. [x] Trigger 파서 구현
+5. [x] 모바일 UI 연결 (record → parse → send)
+6. [x] 테스트/로그/예외처리 강화 (Python 단위테스트 + Android 기본 오류표시)
+7. [ ] 배포 빌드 (로컬 Android SDK/Gradle 환경 필요)
 
 ## Security Notes
 - Bot token은 코드 하드코딩 금지

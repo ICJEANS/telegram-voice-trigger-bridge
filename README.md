@@ -32,9 +32,21 @@ uv run python -m src.main --text "AI야 오늘 일정 알려줘"
 # SENT
 ```
 
+## Android MVP
+- 경로: `android-app/`
+- 구현: Kotlin `MainActivity`에서
+  1) 음성 입력 시작
+  2) STT 결과 수신
+  3) `AI야`/`AI` 트리거 파싱
+  4) Telegram `sendMessage` 전송
+
+> 이 환경에서는 Android SDK/Gradle 실행기가 없어 APK 빌드는 아직 미실행.
+> Android Studio에서 `android-app` 폴더를 열어 빌드하면 된다.
+
 ## Files
 - `src/voice_bridge/trigger.py`: 트리거 파싱
 - `src/voice_bridge/telegram_sender.py`: Telegram API 전송
 - `src/main.py`: CLI 엔트리
 - `tests/`: 단위 테스트
+- `android-app/`: Android Kotlin MVP
 - `DEV_PLAN.md`: 개발 단계 계획

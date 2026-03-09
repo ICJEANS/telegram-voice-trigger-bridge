@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <EditText
+        android:id="@+id/tokenInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Telegram Bot Token"
+        android:inputType="textPassword" />
+
+    <EditText
+        android:id="@+id/chatIdInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Telegram Chat ID"
+        android:layout_marginTop="8dp" />
+
+    <EditText
+        android:id="@+id/triggersInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Triggers (AI야,AI)"
+        android:text="AI야,AI"
+        android:layout_marginTop="8dp" />
+
+    <Button
+        android:id="@+id/recordButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="음성 입력 시작"
+        android:layout_marginTop="12dp" />
+
+    <TextView
+        android:id="@+id/resultText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="대기 중"
+        android:layout_marginTop="12dp" />
+
+</LinearLayout>
