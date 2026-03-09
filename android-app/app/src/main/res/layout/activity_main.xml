@@ -34,6 +34,20 @@
         android:text="음성 입력 시작"
         android:layout_marginTop="12dp" />
 
+    <Button
+        android:id="@+id/startBgButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="백그라운드 감지 시작"
+        android:layout_marginTop="8dp" />
+
+    <Button
+        android:id="@+id/stopBgButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="백그라운드 감지 중지"
+        android:layout_marginTop="8dp" />
+
     <TextView
         android:id="@+id/resultText"
         android:layout_width="match_parent"

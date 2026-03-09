@@ -8,6 +8,7 @@ import android.speech.RecognizerIntent
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
+import androidx.core.content.ContextCompat.startForegroundService
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -40,8 +41,28 @@ class MainActivity : AppCompatActivity() {
         resultText = findViewById(R.id.resultText)
 
         findViewById<Button>(R.id.recordButton).setOnClickListener {
+            saveConfig()
             ensureMicAndStartSpeech()
         }
+
+        findViewById<Button>(R.id.startBgButton).setOnClickListener {
+            saveConfig()
+            ensureMicAndStartBackground()
+        }
+
+        findViewById<Button>(R.id.stopBgButton).setOnClickListener {
+            stopService(Intent(this, BackgroundVoiceService::class.java))
+            resultText.text = "백그라운드 감지 중지됨"
+        }
+    }
+
+    private fun saveConfig() {
+        val prefs = getSharedPreferences("voice_bridge", MODE_PRIVATE)
+        prefs.edit()
+            .putString("token", tokenInput.text.toString().trim())
+            .putString("chatId", chatIdInput.text.toString().trim())
+            .putString("triggers", triggersInput.text.toString().trim())
+            .apply()
     }
 
     private fun ensureMicAndStartSpeech() {
@@ -52,6 +73,17 @@ class MainActivity : AppCompatActivity() {
             return
         }
         startSpeech()
+    }
+
+    private fun ensureMicAndStartBackground() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), requestCodeMic)
+            return
+        }
+        startForegroundService(this, Intent(this, BackgroundVoiceService::class.java))
+        resultText.text = "백그라운드 감지 시작됨"
     }
 
     private fun startSpeech() {
