@@ -1,8 +1,0 @@
-Metadata-Version: 2.4
-Name: telegram-voice-trigger-bridge
-Version: 0.1.0
-Summary: Voice/STT trigger bridge to Telegram
-Requires-Python: >=3.10
-Requires-Dist: requests>=2.31.0
-Provides-Extra: dev
-Requires-Dist: pytest>=8.0.0; extra == "dev"
